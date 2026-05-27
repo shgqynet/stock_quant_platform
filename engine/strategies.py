@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def ma_crossover(close, high, low, i, position, **params):
+def ma_crossover(close, high, low, open_arr, i, position, **params):
     if i < 20 or position != 0:
         return 0
     ma5 = np.mean(close[i - 4:i + 1])
@@ -22,7 +22,7 @@ def ma_crossover_exit(close, high, low, i, entry_price, position, entry_bar, **p
     return 0
 
 
-def dual_thrust(close, high, low, i, position, **params):
+def dual_thrust(close, high, low, open_arr, i, position, **params):
     if i < 5 or position != 0:
         return 0
     prev_high = high[i - 4:i + 1]
@@ -61,7 +61,7 @@ def dual_thrust_exit(close, high, low, i, entry_price, position, entry_bar, **pa
     return 0
 
 
-def heikin_ashi(close, high, low, i, position, **params):
+def heikin_ashi(close, high, low, open_arr, i, position, **params):
     if i < 2:
         return 0
 
@@ -109,7 +109,7 @@ def heikin_ashi_exit(close, high, low, i, entry_price, position, entry_bar, **pa
     return 0
 
 
-def parabolic_sar(close, high, low, i, position, **params):
+def parabolic_sar(close, high, low, open_arr, i, position, **params):
     if i < 3:
         return 0
 
@@ -170,6 +170,85 @@ def parabolic_sar_exit(close, high, low, i, entry_price, position, entry_bar, **
     return 0
 
 
+def ema_crossover(close, high, low, open_arr, i, position, **params):
+    if i < 2 or position != 0:
+        return 0
+
+    def _ema(arr, period):
+        n = len(arr)
+        result = np.full(n, np.nan)
+        alpha = 2 / (period + 1)
+        result[0] = arr[0]
+        for j in range(1, n):
+            result[j] = arr[j] * alpha + result[j - 1] * (1 - alpha)
+        return result
+
+    fast = params.get("ema_fast", 12)
+    slow = params.get("ema_slow", 26)
+
+    ema_fast = _ema(close[:i + 1], fast)
+    ema_slow = _ema(close[:i + 1], slow)
+
+    if np.isnan(ema_fast[i]) or np.isnan(ema_slow[i]) or np.isnan(ema_fast[i - 1]) or np.isnan(ema_slow[i - 1]):
+        return 0
+
+    if ema_fast[i - 1] <= ema_slow[i - 1] and ema_fast[i] > ema_slow[i]:
+        return 1
+    if ema_fast[i - 1] >= ema_slow[i - 1] and ema_fast[i] < ema_slow[i]:
+        return -1
+    return 0
+
+
+def ema_crossover_exit(close, high, low, i, entry_price, position, entry_bar, **params):
+    return 0
+
+
+def shooting_star(close, high, low, open_arr, i, position, **params):
+    if i < 3:
+        return 0
+
+    body = abs(open_arr[i] - close[i])
+    upper_wick = high[i] - max(open_arr[i], close[i])
+    lower_wick = min(open_arr[i], close[i]) - low[i]
+
+    body_size_pct = params.get("body_size", 0.5)
+    wick_multiple = params.get("wick_multiple", 2.0)
+
+    if position <= 0:
+        is_red = open_arr[i] > close[i]
+        has_small_body = body < abs(np.mean(np.diff(close[max(0, i - 20):i + 1]))) * body_size_pct if i > 20 else body < close[i] * 0.01
+        has_long_upper = upper_wick >= wick_multiple * body and body > 0
+        has_small_lower = lower_wick < body * 0.3
+        uptrend = close[i] >= close[i - 1] and close[i - 1] >= close[i - 2]
+
+        if is_red and has_small_body and has_long_upper and has_small_lower and uptrend:
+            return -1
+
+    if position >= 0:
+        is_green = close[i] > open_arr[i]
+        has_small_body = body < abs(np.mean(np.diff(close[max(0, i - 20):i + 1]))) * body_size_pct if i > 20 else body < close[i] * 0.01
+        has_long_lower = lower_wick >= wick_multiple * body and body > 0
+        has_small_upper = upper_wick < body * 0.3
+        downtrend = close[i] <= close[i - 1] and close[i - 1] <= close[i - 2]
+
+        if is_green and has_small_body and has_long_lower and has_small_upper and downtrend:
+            return 1
+
+    return 0
+
+
+def shooting_star_exit(close, high, low, i, entry_price, position, entry_bar, **params):
+    hold = params.get("shooting_hold", 5)
+    stop = params.get("shooting_stop", 0.05)
+    if position != 0 and i >= entry_bar + hold:
+        return -position
+    if position != 0 and entry_price > 0:
+        pnl = abs((close[i] - entry_price) / entry_price)
+        if pnl > stop:
+            return -position
+    return 0
+
+
 STRATEGIES = {
     "ma_crossover": {
         "name": "MA5/MA20 金叉",
@@ -199,6 +278,20 @@ STRATEGIES = {
         "signal": parabolic_sar,
         "exit": parabolic_sar_exit,
         "params": {},
+    },
+    "ema_crossover": {
+        "name": "EMA(12/26) 交叉",
+        "desc": "EMA12上穿EMA26做多，下穿做空",
+        "signal": ema_crossover,
+        "exit": ema_crossover_exit,
+        "params": {"ema_fast": 12, "ema_slow": 26},
+    },
+    "shooting_star": {
+        "name": "流星线/锤子线",
+        "desc": "K线形态识别: 流星线(做空)/锤子线(做多)",
+        "signal": shooting_star,
+        "exit": shooting_star_exit,
+        "params": {"body_size": 0.5, "wick_multiple": 2.0, "shooting_hold": 5, "shooting_stop": 0.05},
     },
 }
 

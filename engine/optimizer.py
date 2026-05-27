@@ -24,6 +24,17 @@ PARAM_GRID = {
         "atr_stop_mult": {"values": [1.5, 2.0, 2.5, 3.0], "label": "ATR止损倍数"},
         "atr_take_mult": {"values": [2.0, 3.0, 4.0, 5.0], "label": "ATR止盈倍数"},
     },
+    "ema_crossover": {
+        "ema_fast": {"values": [5, 10, 12, 15], "label": "快线EMA周期"},
+        "ema_slow": {"values": [20, 26, 30, 50], "label": "慢线EMA周期"},
+        "atr_stop_mult": {"values": [1.5, 2.0, 2.5, 3.0], "label": "ATR止损倍数"},
+        "atr_take_mult": {"values": [2.0, 3.0, 4.0, 5.0], "label": "ATR止盈倍数"},
+    },
+    "shooting_star": {
+        "body_size": {"values": [0.3, 0.5, 0.7], "label": "实体比例"},
+        "wick_multiple": {"values": [1.5, 2.0, 3.0], "label": "影线倍数"},
+        "shooting_hold": {"values": [3, 5, 7], "label": "持有天数"},
+    },
 }
 
 
@@ -31,7 +42,7 @@ def get_param_grid(strategy_name: str):
     return PARAM_GRID.get(strategy_name, {})
 
 
-def optimize(close, high, low,
+def optimize(close, high, low, open=None,
              initial_capital=10000,
              strategy_name="ma_crossover",
              trade_days=60,
@@ -61,6 +72,8 @@ def optimize(close, high, low,
         kwargs["close"] = close
         kwargs["high"] = high
         kwargs["low"] = low
+        if open is not None:
+            kwargs["open"] = open
 
         atr_stop = kwargs.get("atr_stop_mult", 2.0)
         atr_take = kwargs.get("atr_take_mult", 3.0)

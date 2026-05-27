@@ -3,7 +3,7 @@ from .indicators import ATR
 from .strategies import get_strategy
 
 
-def run_backtest(close: list, high: list, low: list,
+def run_backtest(close: list, high: list, low: list, open: list = None,
                  initial_capital: float = 10000,
                  atr_period: int = 14,
                  atr_stop_mult: float = 2.0,
@@ -14,6 +14,7 @@ def run_backtest(close: list, high: list, low: list,
     close = np.array(close, dtype=float)
     high = np.array(high, dtype=float)
     low = np.array(low, dtype=float)
+    open_arr = np.array(open, dtype=float) if open else close
     n = len(close)
 
     if n < max(atr_period + 1, trade_days):
@@ -43,7 +44,7 @@ def run_backtest(close: list, high: list, low: list,
 
         current_atr = atr_vals[i]
 
-        sig = strategy["signal"](close, high, low, i, position, **params)
+        sig = strategy["signal"](close, high, low, open_arr, i, position, **params)
         exit_sig = strategy["exit"](close, high, low, i, entry_price, position, entry_bar, **params)
 
         if exit_sig != 0 and position != 0:

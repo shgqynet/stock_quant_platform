@@ -141,11 +141,13 @@ def backtest():
     close = [d["close"] for d in kline_data]
     high = [d["high"] for d in kline_data]
     low = [d["low"] for d in kline_data]
+    open_p = [d["open"] for d in kline_data]
 
     result = run_backtest(
         close=close,
         high=high,
         low=low,
+        open=open_p,
         initial_capital=initial_capital,
         atr_stop_mult=atr_stop,
         atr_take_mult=atr_take,
@@ -172,11 +174,13 @@ def optimize_endpoint():
     close = [d["close"] for d in kline_data]
     high = [d["high"] for d in kline_data]
     low = [d["low"] for d in kline_data]
+    open_p = [d["open"] for d in kline_data]
 
     result = optimize(
         close=close,
         high=high,
         low=low,
+        open=open_p,
         initial_capital=initial_capital,
         strategy_name=strategy,
         trade_days=trade_days,
