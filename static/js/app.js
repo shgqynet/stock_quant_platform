@@ -2,7 +2,7 @@ let currentCode = '';
 let klineData = [];
 let chart = null;
 let indicatorsData = null;
-    let activeIndicators = ['ma5', 'ma10', 'ma20', 'ma60', 'macd_hist', 'rsi', 'kdj_j'];
+    let activeIndicators = ['ma5', 'ma10', 'ma20', 'ma60', 'rsi', 'kdj_j'];
 let isLoading = false;
 
 // Initialize
@@ -293,30 +293,28 @@ function renderChart() {
     if (!klineData || klineData.length === 0 || !chart) return;
 
     const dates = klineData.map(d => d.date);
-    const opens = klineData.map(d => d.open);
     const closes = klineData.map(d => d.close);
+    const opens = klineData.map(d => d.open);
     const highs = klineData.map(d => d.high);
     const lows = klineData.map(d => d.low);
     const volumes = klineData.map(d => d.volume);
 
+    const series = [];
+    const legendData = [];
+
     // Candlestick
-    const candlestick = {
+    series.push({
         name: 'K线',
         type: 'candlestick',
         data: klineData.map(d => [d.open, d.close, d.low, d.high]),
         itemStyle: {
-            color: '#22c55e',
-            color0: '#ef4444',
-            borderColor: '#22c55e',
-            borderColor0: '#ef4444',
+            color: '#22c55e', color0: '#ef4444',
+            borderColor: '#22c55e', borderColor0: '#ef4444',
         },
-    };
+    });
+    legendData.push('K线');
 
-    const series = [candlestick];
-    const yAxisSeries = [];
-    let legendData = ['K线'];
-
-    // Add indicators as series
+    // Indicator lines
     if (indicatorsData) {
         activeIndicators.forEach(ind => {
             const values = indicatorsData[ind];
@@ -331,38 +329,42 @@ function renderChart() {
             if (ind === 'ma20') { name = 'MA20'; color = '#8b5cf6'; }
             if (ind === 'ma60') { name = 'MA60'; color = '#ec4899'; }
             if (ind === 'boll_upper') { name = 'BOLL上'; color = '#06b6d4'; }
-            if (ind === 'boll_middle') { name = 'BOLL中'; color = '#06b6d4'; }
-            if (ind === 'boll_lower') { name = 'BOLL下'; color = '#06b6d4'; }
-            if (ind === 'macd_hist') { name = 'MACD'; color = '#f97316'; }
+            if (ind === 'boll_middle') { name = 'BOLL中'; color = '#22d3ee'; }
+            if (ind === 'boll_lower') { name = 'BOLL下'; color = '#0891b2'; }
             if (ind === 'rsi') { name = 'RSI'; color = '#a855f7'; }
             if (ind === 'kdj_j') { name = 'KDJ-J'; color = '#14b8a6'; }
 
             legendData.push(name);
             series.push({
-                name,
-                type: 'line',
-                data: validData,
-                smooth: true,
-                symbol: 'none',
+                name, type: 'line', data: validData,
+                smooth: true, symbol: 'none',
                 lineStyle: { width: 1.5, color },
                 yAxisIndex: 0,
             });
         });
     }
 
-    // Volume bar
+    // Volume
     const volumeData = volumes.map((v, i) => [dates[i], v, closes[i] >= opens[i] ? 1 : -1]);
     legendData.push('成交量');
+    series.push({
+        name: '成交量', type: 'bar',
+        data: volumeData,
+        xAxisIndex: 1, yAxisIndex: 1,
+        itemStyle: { color: p => p.data[2] > 0 ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)' },
+    });
 
-    // MACD histogram
+    // MACD bar
     if (indicatorsData && indicatorsData.macd_hist) {
-        const macdData = indicatorsData.macd_hist.map((v, i) => v !== null && v !== undefined ? [dates[i], v] : null).filter(v => v !== null);
+        const macdData = indicatorsData.macd_hist
+            .map((v, i) => v !== null && v !== undefined ? [dates[i], v] : null)
+            .filter(v => v !== null);
         series.push({
-            name: 'MACD',
-            type: 'bar',
+            name: 'MACD', type: 'bar',
             data: macdData,
-            itemStyle: { color: params => params.value[1] >= 0 ? 'rgba(34,197,94,0.6)' : 'rgba(239,68,68,0.6)' },
+            itemStyle: { color: p => p.data[1] >= 0 ? 'rgba(34,197,94,0.6)' : 'rgba(239,68,68,0.6)' },
         });
+        legendData.push('MACD');
     }
 
     const option = {
@@ -435,20 +437,7 @@ function renderChart() {
                 textStyle: { color: '#64748b' },
             },
         ],
-        series: [
-            candlestick,
-            ...series.slice(1),
-            {
-                name: '成交量',
-                type: 'bar',
-                data: volumeData,
-                xAxisIndex: 1,
-                yAxisIndex: 1,
-                itemStyle: {
-                    color: params => params.data[2] > 0 ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)',
-                },
-            },
-        ],
+        series,
     };
 
     chart.setOption(option, true);
