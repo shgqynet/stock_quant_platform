@@ -223,6 +223,6 @@ def support_resistance(code: str):
 if __name__ == "__main__":
     try:
         from waitress import serve
-        serve(app, host="0.0.0.0", port=8000)
+        serve(app, host="0.0.0.0", port=7860)
     except ImportError:
-        app.run(host="0.0.0.0", port=8000, debug=False)
+        app.run(host="0.0.0.0", port=7860, debug=False)
