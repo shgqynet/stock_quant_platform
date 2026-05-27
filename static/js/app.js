@@ -2,7 +2,7 @@ let currentCode = '';
 let klineData = [];
 let chart = null;
 let indicatorsData = null;
-    let activeIndicators = ['ma5', 'ma10', 'ma20', 'ma60', 'rsi', 'kdj_j'];
+    let activeIndicators = ['ma5', 'ma10', 'ma20', 'ma60'];
 let isLoading = false;
 
 // Initialize
@@ -335,11 +335,13 @@ function renderChart() {
             if (ind === 'kdj_j') { name = 'KDJ-J'; color = '#14b8a6'; }
 
             legendData.push(name);
+            const isIndicator = ind === 'rsi' || ind === 'kdj_j';
             series.push({
                 name, type: 'line', data: validData,
                 smooth: true, symbol: 'none',
                 lineStyle: { width: 1.5, color },
-                yAxisIndex: 0,
+                yAxisIndex: isIndicator ? 2 : 0,
+                xAxisIndex: isIndicator ? 2 : 0,
             });
         });
     }
@@ -354,7 +356,7 @@ function renderChart() {
         itemStyle: { color: p => p.data[2] > 0 ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)' },
     });
 
-    // MACD bar
+    // MACD bar (on sub-chart with volume)
     if (indicatorsData && indicatorsData.macd_hist) {
         const macdData = indicatorsData.macd_hist
             .map((v, i) => v !== null && v !== undefined ? [dates[i], v] : null)
@@ -362,6 +364,7 @@ function renderChart() {
         series.push({
             name: 'MACD', type: 'bar',
             data: macdData,
+            xAxisIndex: 1, yAxisIndex: 1,
             itemStyle: { color: p => p.data[1] >= 0 ? 'rgba(34,197,94,0.6)' : 'rgba(239,68,68,0.6)' },
         });
         legendData.push('MACD');
@@ -382,8 +385,9 @@ function renderChart() {
             top: 0,
         },
         grid: [
-            { left: '5%', right: '5%', top: '8%', height: '60%' },
-            { left: '5%', right: '5%', top: '75%', height: '15%' },
+            { left: '5%', right: '5%', top: '10%', height: '46%' },
+            { left: '5%', right: '5%', top: '60%', height: '15%' },
+            { left: '5%', right: '5%', top: '78%', height: '14%' },
         ],
         xAxis: [
             {
@@ -401,6 +405,13 @@ function renderChart() {
                 axisLabel: { show: false },
                 gridIndex: 1,
             },
+            {
+                type: 'category',
+                data: dates,
+                axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
+                axisLabel: { show: false },
+                gridIndex: 2,
+            },
         ],
         yAxis: [
             {
@@ -415,14 +426,21 @@ function renderChart() {
                 axisLabel: { color: '#64748b', fontSize: 10 },
                 gridIndex: 1,
             },
+            {
+                scale: true,
+                splitLine: { show: false },
+                axisLabel: { color: '#64748b', fontSize: 10 },
+                gridIndex: 2,
+            },
         ],
         dataZoom: [
-            { type: 'inside', xAxisIndex: [0, 1], start: Math.max(0, 100 - 60), end: 100 },
+            { type: 'inside', xAxisIndex: [0, 1, 2], start: Math.max(0, 100 - 30), end: 100 },
             {
                 type: 'slider',
-                xAxisIndex: [0, 1],
-                start: Math.max(0, 100 - 60),
+                xAxisIndex: [0, 1, 2],
+                start: Math.max(0, 100 - 30),
                 end: 100,
+                bottom: '2%',
                 bottom: '2%',
                 borderColor: 'rgba(255,255,255,0.1)',
                 backgroundColor: 'rgba(17,24,39,0.8)',

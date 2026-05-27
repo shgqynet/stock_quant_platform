@@ -185,6 +185,12 @@ def optimize_endpoint():
     return jsonify(result)
 
 
+@app.route("/api/strategies")
+def list_strategies():
+    data = {k: {"name": v["name"], "desc": v["desc"], "params": v["params"]} for k, v in STRATEGIES.items()}
+    return jsonify(data)
+
+
 @app.route("/api/strategies/<name>/params")
 def strategy_params(name: str):
     grid = get_param_grid(name)
