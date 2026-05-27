@@ -43,12 +43,27 @@ function setupEventListeners() {
 
     document.querySelectorAll('.indicator-tab').forEach(tab => {
         tab.addEventListener('click', () => {
-            tab.classList.toggle('active');
+            const group = tab.dataset.group;
             const ind = tab.dataset.indicator;
-            if (tab.classList.contains('active')) {
-                if (!activeIndicators.includes(ind)) activeIndicators.push(ind);
+
+            if (group === 'boll') {
+                const bollInds = ['boll_upper', 'boll_middle', 'boll_lower'];
+                const wasActive = tab.classList.contains('active');
+                tab.classList.toggle('active');
+                bollInds.forEach(b => {
+                    if (wasActive) {
+                        activeIndicators = activeIndicators.filter(i => i !== b);
+                    } else {
+                        if (!activeIndicators.includes(b)) activeIndicators.push(b);
+                    }
+                });
             } else {
-                activeIndicators = activeIndicators.filter(i => i !== ind);
+                tab.classList.toggle('active');
+                if (tab.classList.contains('active')) {
+                    if (!activeIndicators.includes(ind)) activeIndicators.push(ind);
+                } else {
+                    activeIndicators = activeIndicators.filter(i => i !== ind);
+                }
             }
             renderChart();
         });
