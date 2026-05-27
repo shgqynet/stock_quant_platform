@@ -29,6 +29,24 @@ def _get_qcode(code: str) -> str:
 
 def fetch_realtime_quote(code: str) -> Optional[dict]:
     qcode = _get_qcode(code)
+    market = qcode[:2]
+    bare = qcode[2:]
+
+    result = _do_fetch_quote(market, bare)
+    if result:
+        return result
+
+    if bare.startswith("0") or bare.startswith("3"):
+        other = "sh" if market == "sz" else "sz"
+        result = _do_fetch_quote(other, bare)
+        if result:
+            return result
+
+    return None
+
+
+def _do_fetch_quote(market: str, bare: str) -> Optional[dict]:
+    qcode = f"{market}{bare}"
     try:
         resp = requests.get(
             TENCENT_QUOTE_URL + qcode,

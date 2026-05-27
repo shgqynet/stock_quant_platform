@@ -214,22 +214,24 @@ def shooting_star(close, high, low, open_arr, i, position, **params):
     body_size_pct = params.get("body_size", 0.5)
     wick_multiple = params.get("wick_multiple", 2.0)
 
+    avg_change = np.mean(np.abs(np.diff(close[max(0, i - 20):i + 1]))) if i > 20 else close[i] * 0.01
+
     if position <= 0:
         is_red = open_arr[i] > close[i]
-        has_small_body = body < abs(np.mean(np.diff(close[max(0, i - 20):i + 1]))) * body_size_pct if i > 20 else body < close[i] * 0.01
+        has_small_body = body < avg_change * body_size_pct
         has_long_upper = upper_wick >= wick_multiple * body and body > 0
         has_small_lower = lower_wick < body * 0.3
-        uptrend = close[i] >= close[i - 1] and close[i - 1] >= close[i - 2]
+        uptrend = i >= 2 and close[i] >= close[i - 1] and close[i - 1] >= close[i - 2]
 
         if is_red and has_small_body and has_long_upper and has_small_lower and uptrend:
             return -1
 
     if position >= 0:
         is_green = close[i] > open_arr[i]
-        has_small_body = body < abs(np.mean(np.diff(close[max(0, i - 20):i + 1]))) * body_size_pct if i > 20 else body < close[i] * 0.01
+        has_small_body = body < avg_change * body_size_pct
         has_long_lower = lower_wick >= wick_multiple * body and body > 0
         has_small_upper = upper_wick < body * 0.3
-        downtrend = close[i] <= close[i - 1] and close[i - 1] <= close[i - 2]
+        downtrend = i >= 2 and close[i] <= close[i - 1] and close[i - 1] <= close[i - 2]
 
         if is_green and has_small_body and has_long_lower and has_small_upper and downtrend:
             return 1
