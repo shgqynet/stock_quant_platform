@@ -1,3 +1,13 @@
+---
+title: 量化选股分析平台
+emoji: 📊
+colorFrom: blue
+colorTo: purple
+sdk: docker
+app_file: app.py
+pinned: false
+---
+
 # 量化选股分析平台
 
 > **当前版本：v1.1.0** — 2026-05-27
