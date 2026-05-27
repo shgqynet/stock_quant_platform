@@ -195,7 +195,6 @@ async function loadStock(code) {
             if (indicators) {
                 indicatorsData = indicators;
                 renderSupportResistance(indicators);
-                renderATRInfo();
             }
         } catch { /* ignore */ }
     }
