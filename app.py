@@ -1,6 +1,8 @@
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 import json
+import os
+import time
 from functools import lru_cache
 
 from data.fetcher import fetch_realtime_quote, fetch_kline, search_stocks
@@ -13,9 +15,21 @@ from engine.optimizer import optimize, get_param_grid
 app = Flask(__name__)
 CORS(app)
 
-@lru_cache(maxsize=100)
+# 简单 TTL 缓存：只缓存成功结果，失败不缓存
+_kline_cache = {}
+_CACHE_TTL = 300  # 5分钟
+
 def get_kline_cached(code: str, days: int):
-    return fetch_kline(code, days)
+    cache_key = f"{code}:{days}"
+    now = time.time()
+    if cache_key in _kline_cache:
+        cached_time, cached_data = _kline_cache[cache_key]
+        if now - cached_time < _CACHE_TTL and cached_data:
+            return cached_data
+    result = fetch_kline(code, days)
+    if result:  # 只缓存成功结果
+        _kline_cache[cache_key] = (now, result)
+    return result
 
 @app.route("/")
 def index():
@@ -46,14 +60,14 @@ def kline(code: str):
     data = get_kline_cached(code, days)
     if data:
         return jsonify({"data": data})
-    return jsonify({"data": [], "error": "无法获取K线数据"})
+    return jsonify({"data": [], "error": "K线数据加载失败，请刷新页面重试。"})
 
 @app.route("/api/indicators/<code>")
 def indicators(code: str):
     days = request.args.get("days", 250, type=int)
     kline_data = get_kline_cached(code, days)
     if not kline_data:
-        return jsonify({"error": "无法获取K线数据"}), 404
+        return jsonify({"error": "K线数据加载失败，请刷新页面重试。"}), 404
 
     close = [d["close"] for d in kline_data]
     high = [d["high"] for d in kline_data]
@@ -110,7 +124,7 @@ def analysis(code: str):
     days = request.args.get("days", 250, type=int)
     kline_data = get_kline_cached(code, days)
     if not kline_data:
-        return jsonify({"error": "无法获取K线数据"}), 404
+        return jsonify({"error": "K线数据加载失败，请刷新页面重试。"}), 404
 
     df = {
         "close": [d["close"] for d in kline_data],
@@ -136,7 +150,7 @@ def backtest():
 
     kline_data = get_kline_cached(code, days)
     if not kline_data:
-        return jsonify({"error": "无法获取K线数据"}), 404
+        return jsonify({"error": "K线数据加载失败，请刷新页面重试。"}), 404
 
     close = [d["close"] for d in kline_data]
     high = [d["high"] for d in kline_data]
@@ -169,7 +183,7 @@ def optimize_endpoint():
 
     kline_data = get_kline_cached(code, days)
     if not kline_data:
-        return jsonify({"error": "无法获取K线数据"}), 404
+        return jsonify({"error": "K线数据加载失败，请刷新页面重试。"}), 404
 
     close = [d["close"] for d in kline_data]
     high = [d["high"] for d in kline_data]
@@ -206,7 +220,7 @@ def support_resistance(code: str):
     days = request.args.get("days", 250, type=int)
     kline_data = get_kline_cached(code, days)
     if not kline_data:
-        return jsonify({"error": "无法获取K线数据"}), 404
+        return jsonify({"error": "K线数据加载失败，请刷新页面重试。"}), 404
 
     import numpy as np
     high = np.array([d["high"] for d in kline_data], dtype=float)
@@ -220,9 +234,9 @@ def support_resistance(code: str):
         "current_price": round(float(close[-1]), 2),
     })
 
-if __name__ == "__main__":
-    try:
-        from waitress import serve
-        serve(app, host="0.0.0.0", port=7860)
-    except ImportError:
-        app.run(host="0.0.0.0", port=7860, debug=False)
+port = int(os.environ.get("PORT", 8000))
+try:
+    from waitress import serve
+    serve(app, host="0.0.0.0", port=port)
+except ImportError:
+    app.run(host="0.0.0.0", port=port, debug=False)

@@ -165,11 +165,11 @@ async function loadStock(code) {
             } else if (kline && kline.error) {
                 showError('kline-chart', kline.error);
             } else {
-                showError('kline-chart', '暂无K线数据');
+                showError('kline-chart', 'K线数据加载失败，请刷新页面重试。');
             }
         } catch { /* ignore */ }
     } else {
-        showError('kline-chart', 'K线数据加载失败');
+        showError('kline-chart', 'K线数据加载失败，请刷新页面重试。');
     }
 
     if (quoteResult.status === 'fulfilled') {
